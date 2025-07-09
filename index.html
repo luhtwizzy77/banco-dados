@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Alunos - Acesso Restrito</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Courier New, sans-serif;
+      background-color: #f2f2f2;
+      padding: 20px;
+    }
+
+    .form-container, form {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+    }
+
+    input, select {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #config-banco {
+      border: 2px dashed #4CAF50;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Cadastro de Alunos - Acesso Restrito</h1>
+
+  <!-- Tela de login -->
+  <div id="login-form" class="form-container">
+    <p>coloca a senha aq
+    </p>
+    <input type="password" id="senha" placeholder="senha aq macaco" />
+    <button onclick="verificarSenha()">Entrar</button>
+    <p id="erro" style="color: red;"></p>
+  </div>
+
+  <!-- Conteúdo principal -->
+  <div id="conteudo" class="hidden">
+    <button onclick="criarBancoPersonalizado()">adicionar banco personalizado</button>
+
+    <div id="config-banco" class="form-container hidden">
+      <h3>Configurar Banco de Dados Pessoal</h3>
+      <input type="text" id="label-nome" placeholder="Nome do campo 1 (ex: pessoa)" />
+      <input type="text" id="label-sala" placeholder="Nome do campo 2 (ex: email)" />
+      <input type="text" id="label-serie" placeholder="Nome do campo 3 (ex: cpf)" />
+      <input type="text" id="label-idade" placeholder="Nome do campo 4 (ex: endereço)" />
+      <button onclick="salvarConfiguracaoBanco()">Salvar Configuração</button>
+    </div>
+
+    <form id="form-aluno">
+      <select id="tipo-banco" required>
+        <option value="" disabled selected>Selecione o tipo de banco de dados</option>
+        <option value="geral">Banco de Dados Geral</option>
+        <option value="pessoal">Banco de Dados Pessoal</option>
+      </select>
+      <input type="text" id="nome" placeholder="Nome" required />
+      <input type="text" id="sala" placeholder="Sala" required />
+      <input type="text" id="serie" placeholder="Série" required />
+      <input type="number" id="idade" placeholder="Idade" required />
+      <button type="submit">Salvar Aluno</button>
+    </form>
+
+    <h2>lista de cadastros</h2>
+    <table>
+      <thead>
+        <tr>
+          <th id="th-nome">Nome</th>
+          <th id="th-sala">Sala</th>
+          <th id="th-serie">Série</th>
+          <th id="th-idade">Idade</th>
+        </tr>
+      </thead>
+      <tbody id="lista-alunos"></tbody>
+    </table>
+  </div>
+
+  <script>
+    function verificarSenha() {
+      const senhaCorreta = "raldir123";
+      const senhaDigitada = document.getElementById("senha").value;
+
+      if (senhaDigitada === senhaCorreta) {
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("conteudo").classList.remove("hidden");
+        aplicarRotulosPersonalizados();
+      } else {
+        document.getElementById("erro").textContent = "Chave incorreta.";
+      }
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDvh-v9Sp4QZtJOoGlVW_YruJBojC7hvZM",
+      authDomain: "banco-de-dados-15321.firebaseapp.com",
+      databaseURL: "https://banco-de-dados-15321-default-rtdb.firebaseio.com",
+      projectId: "banco-de-dados-15321",
+      storageBucket: "banco-de-dados-15321.firebasestorage.app",
+      messagingSenderId: "409644473944",
+      appId: "1:409644473944:web:dd993a2c60bc489651742d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const form = document.getElementById("form-aluno");
+    const lista = document.getElementById("lista-alunos");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const tipoBanco = document.getElementById("tipo-banco").value;
+      const aluno = {
+        nome: document.getElementById("nome").value,
+        sala: document.getElementById("sala").value,
+        serie: document.getElementById("serie").value,
+        idade: document.getElementById("idade").value
+      };
+
+      if (tipoBanco === "geral") {
+        database.ref("geral/alunos").push(aluno).then(() => form.reset());
+      } else if (tipoBanco === "pessoal") {
+        let alunosPessoais = JSON.parse(localStorage.getItem("alunosPessoais")) || [];
+        alunosPessoais.push(aluno);
+        localStorage.setItem("alunosPessoais", JSON.stringify(alunosPessoais));
+        form.reset();
+      }
+    });
+
+    document.getElementById("tipo-banco").addEventListener("change", function () {
+      const tipoBanco = this.value;
+      lista.innerHTML = "";
+
+      if (tipoBanco === "geral") {
+        database.ref("geral/alunos").on("value", function (snapshot) {
+          lista.innerHTML = "";
+          snapshot.forEach(function (child) {
+            const a = child.val();
+            lista.innerHTML += `
+              <tr>
+                <td>${a.nome}</td>
+                <td>${a.sala}</td>
+                <td>${a.serie}</td>
+                <td>${a.idade}</td>
+              </tr>
+            `;
+          });
+        });
+      } else if (tipoBanco === "pessoal") {
+        const alunosPessoais = JSON.parse(localStorage.getItem("alunosPessoais")) || [];
+        alunosPessoais.forEach(function (a) {
+          lista.innerHTML += `
+            <tr>
+              <td>${a.nome}</td>
+              <td>${a.sala}</td>
+              <td>${a.serie}</td>
+              <td>${a.idade}</td>
+            </tr>
+          `;
+        });
+      }
+    });
+
+    function criarBancoPersonalizado() {
+      document.getElementById("config-banco").classList.remove("hidden");
+    }
+
+    function salvarConfiguracaoBanco() {
+      const campos = {
+        nome: document.getElementById("label-nome").value || "Nome",
+        sala: document.getElementById("label-sala").value || "Sala",
+        serie: document.getElementById("label-serie").value || "Série",
+        idade: document.getElementById("label-idade").value || "Idade"
+      };
+      localStorage.setItem("camposPersonalizados", JSON.stringify(campos));
+      aplicarRotulosPersonalizados();
+      document.getElementById("config-banco").classList.add("hidden");
+    }
+
+    function aplicarRotulosPersonalizados() {
+      const campos = JSON.parse(localStorage.getItem("camposPersonalizados"));
+      if (campos) {
+        document.getElementById("nome").placeholder = campos.nome;
+        document.getElementById("sala").placeholder = campos.sala;
+        document.getElementById("serie").placeholder = campos.serie;
+        document.getElementById("idade").placeholder = campos.idade;
+
+        document.getElementById("th-nome").textContent = campos.nome;
+        document.getElementById("th-sala").textContent = campos.sala;
+        document.getElementById("th-serie").textContent = campos.serie;
+        document.getElementById("th-idade").textContent = campos.idade;
+      }
+    }
+
+    window.addEventListener("load", aplicarRotulosPersonalizados);
+  </script>
+</body>
+</html>
